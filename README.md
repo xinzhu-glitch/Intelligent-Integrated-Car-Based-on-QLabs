@@ -12,6 +12,32 @@
 
 项目目标不是只展示单个脚本，而是逐步把视觉感知、路径跟踪、避障决策、泊车控制和场景搭建组合成一个适合智能小车实验验证的 QLabs 工程。由于 QLabs 自带场景不完全适合当前功能集成测试，本项目额外搭建了可控道路、路口和停车区域，并自定义了黑色背景板红绿灯，避免官方黄色背景板对视觉识别造成明显干扰。
 
+## 效果展示
+
+### 视觉循路与避障换道
+
+车辆在 QLabs 开放道路场景中识别车道线和交通锥障碍物，并根据虚实线条件执行避障换道。下图展示了连续三次遇到障碍物时的全景效果。
+
+| 第一次避障 | 第二次避障 | 第三次避障 |
+| --- | --- | --- |
+| ![第一次避障全景](assets/readme/report-media/obstacle_avoidance_01_overview.png) | ![第二次避障全景](assets/readme/report-media/obstacle_avoidance_02_overview.png) | ![第三次避障全景](assets/readme/report-media/obstacle_avoidance_03_overview.png) |
+
+程序运行时，前后摄像头窗口会同步显示 ROI 区域、扫描线、车道边缘点、目标中心点、误差值以及车道虚实线判断结果；README 中不再逐张展示摄像头窗口截图，以保持首页重点放在整体运行效果上。
+
+### 侧方位停车
+
+侧方位停车功能会先搭建停车位场景，再通过状态机控制车辆完成倒车入库和姿态修正。下面给出从场景预览、切入车位、姿态修正到最终停稳的全过程图。
+
+| 场景预览 | 开始切入 | 倒车转向 |
+| --- | --- | --- |
+| ![侧方位停车场景预览](assets/readme/report-media/parking_state_01_scene_preview.png) | ![侧方位停车开始切入](assets/readme/report-media/parking_state_02_entering.png) | ![侧方位停车倒车转向](assets/readme/report-media/parking_state_03_turning.png) |
+
+| 姿态修正 | 轨迹记录 | 最终停稳 |
+| --- | --- | --- |
+| ![侧方位停车姿态修正](assets/readme/report-media/parking_state_04_aligning.png) | ![侧方位停车轨迹记录](assets/readme/report-media/parking_state_05_trajectory.png) | ![侧方位停车最终停稳](assets/readme/report-media/parking_state_06_final.png) |
+
+Matplotlib 俯视图会同步绘制车辆轮廓、车头方向和泊车轨迹，方便观察状态机每个阶段的运动效果。
+
 ## 1. 项目结构
 
 ```text
@@ -130,13 +156,23 @@ QLabs_github/
 
 ### 3.2 Python 依赖
 
-如果你的 Quanser 环境已经配置好，但缺少通用第三方库，可以尝试安装：
+建议使用 conda 创建独立环境，避免和系统 Python 或其它课程项目互相影响：
+
+```powershell
+conda create -n qlabs-qcar python=3.10
+conda activate qlabs-qcar
+pip install numpy opencv-python matplotlib
+```
+
+如果你的 Quanser 环境已经配置好，但只是缺少通用第三方库，也可以在当前环境中安装：
 
 ```powershell
 pip install numpy opencv-python matplotlib
 ```
 
 如果你使用的是学校或实验室提供的虚拟环境，请先激活对应环境后再安装依赖。不要随意切换 Python 解释器，否则可能出现 `qvl` 或 `pal` 无法导入的问题。
+
+注意：`qvl`、`pal` 依赖 Quanser 官方安装环境。若在 conda 环境中执行脚本时提示无法导入这两个包，需要确认 Quanser 官方库已经安装，并让当前 Python 环境能够访问这些库；不同学校机房或个人电脑上的 Quanser 安装方式可能不同，这一步需要以本机实际配置为准。
 
 ### 3.3 QLabs 启动要求
 
@@ -156,13 +192,43 @@ pip install numpy opencv-python matplotlib
 
 ## 4. 快速开始
 
-以下命令均建议在 `QLabs_github` 目录中执行：
+以下流程只使用相对路径，适合在任意位置克隆和运行项目。示例中的仓库地址为当前项目的 GitHub 地址。
+
+### 4.1 克隆项目
 
 ```powershell
-cd "D:\Desktop\自控实验（下）\实验一\QLabs_github"
+git clone https://github.com/xinzhu-glitch/Intelligent-Integrated-Car-Based-on-QLabs.git
+cd Intelligent-Integrated-Car-Based-on-QLabs
 ```
 
-### 4.1 运行自主循路
+### 4.2 创建并激活 conda 环境
+
+```powershell
+conda create -n qlabs-qcar python=3.10
+conda activate qlabs-qcar
+pip install numpy opencv-python matplotlib
+```
+
+如果你已经有可以正常导入 `qvl` 和 `pal` 的 Quanser/QCar Python 环境，也可以直接激活已有环境，然后进入项目目录运行脚本。
+
+### 4.3 启动 QLabs
+
+运行任何脚本前，请先打开 Quanser Interactive Labs / QLabs，并确保本机 Python 可以连接 `localhost` 上的 QLabs 服务。
+
+如果你在自己的实验目录中额外保存了 `OpenQLabs.bat`，可以先运行该批处理文件；如果没有，也可以手动打开 QLabs 软件并加载合适场景。
+
+### 4.4 进入项目目录
+
+如果你是按上面的 `git clone` 流程操作，此时已经位于项目根目录。之后所有命令都在该目录或其子目录中执行，不需要写任何本机绝对路径。
+
+```powershell
+pwd
+dir
+```
+
+正常情况下可以看到 `lane_following.py`、`polynomial_with_obstacle.py`、`parallel_parking.py` 等文件。
+
+### 4.5 运行自主循路
 
 ```powershell
 python lane_following.py
@@ -179,7 +245,7 @@ python lane_following.py
 - 点击 OpenCV 图像窗口后按 `q` 或 `Esc`。
 - 或在终端按 `Ctrl+C`。
 
-### 4.2 运行避障换道
+### 4.6 运行避障换道
 
 ```powershell
 python polynomial_with_obstacle.py
@@ -193,9 +259,12 @@ python polynomial_with_obstacle.py
 - 换道完成后恢复视觉循迹。
 - 若两侧均为实线，则停车保护。
 
-退出方式同自主循路脚本。
+退出方式：
 
-### 4.3 预览侧方位停车场景
+- 点击 OpenCV 图像窗口后按 `q` 或 `Esc`。
+- 或在终端按 `Ctrl+C`。
+
+### 4.7 预览侧方位停车场景
 
 ```powershell
 python parallelparking_scene_builder.py
@@ -209,7 +278,7 @@ python parallelparking_scene_builder.py
 
 关闭 Matplotlib 窗口后程序结束。
 
-### 4.4 运行侧方位停车
+### 4.8 运行侧方位停车
 
 ```powershell
 python parallel_parking.py
@@ -227,12 +296,12 @@ python parallel_parking.py
 - 在 Matplotlib 窗口中按 `Esc`。
 - 或在终端按 `Ctrl+C`。
 
-### 4.5 运行进阶组合场景
+### 4.9 运行进阶组合场景
 
-进入进阶场景目录：
+进入进阶场景目录后运行：
 
 ```powershell
-cd "D:\Desktop\自控实验（下）\实验一\QLabs_github\进阶场景集成"
+cd 进阶场景集成
 python scene_runner.py
 ```
 
@@ -245,6 +314,12 @@ python scene_runner.py
 - 红绿灯持续循环切换。
 
 该目录的详细参数请查看 `进阶场景集成/场景搭建说明.md`。
+
+如果要回到项目根目录继续运行其它脚本：
+
+```powershell
+cd ..
+```
 
 ## 5. 常见问题
 
